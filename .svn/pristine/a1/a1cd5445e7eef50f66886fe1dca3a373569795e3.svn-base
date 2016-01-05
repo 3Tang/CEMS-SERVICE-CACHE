@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<root>
+  <thriftBean selectorThreads="2" workerThreads="400"/>
+  <logBean logLevel="INFO" logPath="../logs/Sys.log"/>
+	<params> 
+		<!--UDP监听端口号-->
+		<paramBean key="listenPort" value="8080" />
+	</params>
+
+  <timers>
+    <timerBean>
+      <name>deviceOnlineJob</name>
+      <group>deviceOnlineGroup</group>
+      <trigger>deivceOnlineTrigger</trigger>
+      <cycle>0 * 0/3 * * ?</cycle>
+    </timerBean>
+    <timerBean>
+      <name>policyCacheJob</name>
+      <group>policyCache</group>
+      <trigger>policyCacheTrigger</trigger>
+      <cycle>0 5/30 * * * ?</cycle>
+    </timerBean>
+    <timerBean>
+      <name>deviceCacheJob</name>
+      <group>deviceCache</group>
+      <trigger>deviceCacheTrigger</trigger>
+      <cycle>0 7/60 * * * ?</cycle>
+    </timerBean>
+    <timerBean>
+      <name>userCacheJob</name>
+      <group>userCache</group>
+      <trigger>userCacheTrigger</trigger>
+      <cycle>0 10/50 * * * ?</cycle>
+    </timerBean>
+    <timerBean>
+      <name>productCacheJob</name>
+      <group>productCache</group>
+      <trigger>productCacheTrigger</trigger>
+      <cycle>0 0 0/3 * * * ?</cycle>
+    </timerBean>
+    <timerBean>
+      <name>PolicyXmlJob</name>
+      <group>PolicyXmlGroup</group>
+      <trigger>PolicyXmlTrigger</trigger>
+      <cycle>0 0 0/3 * * ?</cycle>
+    </timerBean>
+  </timers>
+</root>

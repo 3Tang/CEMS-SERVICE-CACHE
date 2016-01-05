@@ -1,0 +1,63 @@
+/**   
+* @Title: JedisRwPool.java 
+* @Package com.vrv.cems.service.cache.util 
+* @Description: TODO(用一句话描述该文件做什么) 
+* @author tangtieqiao
+		   tangtieqiao@vrvmail.com.cn
+* @date 2015年8月6日 下午2:50:13 
+* @version V1.0   
+*/
+package com.vrv.cems.service.cache.util;
+
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+
+
+
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.util.Pool;
+
+/** 
+ * @ClassName: JedisRwPool 
+ * @Description: TODO(这里用一句话描述这个类的作用) 
+ * @author tangtieqiao
+			tangtieqiao@vrvmail.com.cn
+ * @date 2015年8月6日 下午2:50:13 
+ *  
+ */
+public class JedisRwPool extends Pool{
+	
+	
+
+	
+	public JedisRwPool(String host, int port) {
+		this(new GenericObjectPoolConfig(), host, port, 2000, null, 0, null);
+	}
+	
+	public JedisRwPool(GenericObjectPoolConfig poolConfig, String host, int port) {
+		this(poolConfig, host, port, 2000, null, 0, null);
+	}
+
+	/** 
+	* <p>Title: </p> 
+	* <p>Description: </p> 
+	* @param poolConfig
+	* @param host
+	* @param port
+	* @param i
+	* @param object
+	* @param j
+	* @param object2 
+	*/
+	public JedisRwPool(GenericObjectPoolConfig poolConfig, String host, int port,
+			int timeout, String password, int database, String clientName) {
+		super(poolConfig, new JedisFactoryRw(host, port, timeout, password,
+				database, clientName));
+	}
+	
+	public JedisRw getResource() {
+		JedisRw jedis = (JedisRw) super.getResource();
+		jedis.setDataSource(this);
+		return jedis;
+	}
+}

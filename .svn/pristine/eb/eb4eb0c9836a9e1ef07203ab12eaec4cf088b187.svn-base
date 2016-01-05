@@ -1,0 +1,832 @@
+package com.vrv.cems.service.cache.service.impl;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import com.sys.common.util.ReflectionUtils;
+import com.vrv.cems.service.base.interfaces.ICacheService;
+import com.vrv.cems.service.base.bean.cache.DeviceCache;
+import com.vrv.cems.service.base.bean.cache.Result;
+import com.vrv.cems.service.cache.action.ICacheServiceAction;
+import com.vrv.cems.service.cache.bean.DeviceBean;
+import com.vrv.cems.service.cache.core.Services;
+import com.vrv.cems.service.cache.service.DeviceService;
+import com.vrv.cems.service.cache.service.IP2DevOnlyIdService;
+import com.vrv.cems.service.cache.util.RedisUtil;
+import com.vrv.cems.service.cache.util.ReflectUtils;
+import com.vrv.cems.service.init.CacheServiceConstants;
+
+/**
+ * <B>说 明</B>:设备信息Service实现类(默认)
+ * 
+ * @author 作 者 名：glw<br/>
+ *         E-mail ：linwu_gao@163.com
+ * 
+ * @version 版 本 号：V1.0.<br/>
+ *          创建时间：2015年4月21日 下午6:56:27
+ */
+public class DeviceServiceImpl implements DeviceService {
+	
+
+	@Override
+	public Result saveDevice(String maxCode, String minCode,
+			DeviceCache deviceCache) {
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.SAVEDEVICE)){
+			log.info("保存设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("保存设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (deviceCache == null) {
+			log.info("保存设备信息到缓存失败[设备信息为空]!");
+			result.setCode(1);
+			result.setInfo("保存设备信息到缓存失败[设备信息为空]!");
+		} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+			log.info("保存设备信息到缓存失败[设备devOnlyId为空]!");
+			result.setCode(2);
+			result.setInfo("保存设备信息到缓存失败[设备devOnlyId为空]!");
+		} else {
+			// 后期考虑反射实现....
+			// 新建一个实体类
+			DeviceBean deviceBean = new DeviceBean();
+
+			try {
+				// 把cache类里的数据传给实体类
+				BeanUtils.copyProperties(deviceBean, deviceCache);
+				// 用反射得到实体类的属性值
+				Map<String, String> fieldValueMap = ReflectUtils.setObject2Map(
+						deviceBean, DeviceBean.class);
+				// 把属性字段对应的值存入到Redis中
+			
+				for (Map.Entry<String, String> entry : fieldValueMap.entrySet()) {
+					try{
+					RedisUtil.getInstance().hset(
+							ICacheService.PREFIX_DEVICECACHE
+									+ deviceCache.getDevOnlyId(),
+							entry.getKey(), entry.getValue());
+					}
+					catch(Exception e)
+					{ 
+						
+						log.info("缓存saveDevice异常!"+e.getMessage());
+						result.setCode(3);
+						result.setInfo("缓存saveDevice异常![设备devOnlyId"+deviceCache.getDevOnlyId()+"异常]!");
+						return result;
+					}
+				}
+				log.info("保存设备信息到缓存成功!");
+				result.setCode(0);
+				result.setInfo("保存设备信息到缓存成功!");
+			} catch (IllegalAccessException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Result updateDevice(String maxCode, String minCode,
+			DeviceCache deviceCache) {
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.UPDATEDEVICE)){
+			log.info("更新设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("更新设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (deviceCache == null) {
+			log.info("更新设备信息到缓存失败[设备信息为空]!");
+			result.setCode(1);
+			result.setInfo("更新设备信息到缓存失败[设备信息为空]!");
+		} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+			log.info("保存设备信息到缓存失败[设备devOnlyId为空]!");
+			result.setCode(2);
+			result.setInfo("更新设备信息到缓存失败[设备devOnlyId为空]!");
+		} else {
+			// 新建一个实体类
+			DeviceBean deviceBean = new DeviceBean();
+
+			try {
+				// 把cache类里的数据传给实体类
+				BeanUtils.copyProperties(deviceBean, deviceCache);
+				// 用反射得到实体类的属性值
+				Map<String, String> fieldValueMap = ReflectUtils.setObject2Map(
+						deviceBean, DeviceBean.class);
+				// 把属性字段对应的值存入到Redis中
+				for (Map.Entry<String, String> entry : fieldValueMap.entrySet()) {
+					try{
+					RedisUtil.getInstance().hset(
+							ICacheService.PREFIX_DEVICECACHE
+									+ deviceCache.getDevOnlyId(),
+							entry.getKey(), entry.getValue());
+					}
+					catch(Exception e)
+					{ 
+						
+						log.info("缓存updateDevice异常!"+e.getMessage());
+						result.setCode(3);
+						result.setInfo("缓存updateDevice异常![设备devOnlyId"+deviceCache.getDevOnlyId()+"异常]!");
+						return result;
+					}
+				}
+				log.info("更新设备信息到缓存成功!");
+				result.setCode(0);
+				result.setInfo("更新设备信息到缓存成功!");
+			} catch (IllegalAccessException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO 自动生成的 catch 块
+				e.printStackTrace();
+			}
+		}
+		return result;
+	}
+
+	@SuppressWarnings("null")
+	@Override
+	public DeviceCache queryDeviceByDevOnlyId(String maxCode, String minCode,
+			String devOnlyId) {
+		Result result = new Result();
+		List<DeviceCache> deviceCacheList=new ArrayList<DeviceCache>();
+		DeviceCache deviceCache = new DeviceCache();
+		if(!minCode.equals(ICacheService.QUERYDEVICEBYDEVONLYID)){
+			log.info("根据devOnlyId查询设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据devOnlyId查询设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (StringUtils.isBlank(devOnlyId)) {
+			log.info("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId + " 为空]!");
+			result.setCode(2);
+			result.setInfo("从缓存中查询设备信息失败[设备devOnlyId为空]!");
+		} else if (!StringUtils.isBlank(devOnlyId)) {
+			Map<String, String> fieldValueMap = new HashMap<String, String>();
+			// 从缓存中取出的所有属性值给map
+			try{
+			 fieldValueMap = RedisUtil.getInstance().hgetAll(
+					ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+			}
+			 catch(Exception e)
+			 {
+				 
+				 log.info("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId
+							+ " 对应的值在缓存中未找到]!"+e.getLocalizedMessage());
+				    result.setCode(3);
+					result.setInfo("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId
+							+ " 对应的值在缓存中未找到]!");
+					deviceCache.clear();
+					return deviceCache;
+			 }
+			if (fieldValueMap == null || fieldValueMap.size() < 1) {
+				log.info("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId
+						+ " 对应的值在缓存中未找到]!");
+				deviceCache.clear();
+				return deviceCache;
+			} else {
+				// 将查询出的Hash值依次对应让如到DeviceCache对象中，并返回
+				// 考虑可以写工具类
+				deviceCache = ReflectUtils.setMap2Ojbect(fieldValueMap,
+						deviceCache, DeviceCache.class);
+				log.info("从缓存取得的设备信息为"+deviceCache.toString());
+				log.info("从缓存中查询设备信息成功");
+				result.setCode(0);
+				result.setInfo("从缓存中查询设备信息成功!");
+				return deviceCache;
+			}
+		}
+		deviceCache.clear();
+		return deviceCache;
+	}
+
+	@Override
+	public Result deleteDeviceByDevOnlyId(String maxCode, String minCode,
+			String devOnlyId) {
+		Result result = new Result();
+		Long tempResult = null;
+	
+		if(!minCode.equals(ICacheService.DELETEDEVICEBYDEVONLYID)){
+			log.info("根据devOnlyId删除设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据devOnlyId删除设备信息参数不正确[功能号minCode不正确]!");
+
+		} else if (StringUtils.isBlank(devOnlyId)) {
+			log.info("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId为空]!");
+			result.setCode(1);
+			result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId为空]!");
+
+		} else {
+			try{
+			 tempResult = RedisUtil.getInstance().delete(
+					ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+			}catch(Exception e)
+			{
+				log.info("从缓存中删除设备信息失败!"+e.getMessage());
+				result.setCode(3);
+				result.setInfo("从缓存中删除设备信息失败!"+e.getMessage());
+				tempResult=-1l;
+				return result;
+			}
+			
+			if (tempResult >= 0) {
+				result.setCode(0);
+				result.setInfo("从缓存中删除设备信息成功");
+			}
+
+			log.info("删除返回为" + tempResult);
+		}
+		return result;
+
+	}
+
+	@Override
+	public Result updateDeviceByField(String maxCode, String minCode,
+			String devOnlyId, Map<String, String> fieldValueMap) {
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.UPDATEDEVICEBYFIELD)){
+			log.info("根据map更新设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据map更新设备信息参数不正确[功能号minCode不正确]!");
+
+		} else if (fieldValueMap == null && fieldValueMap.size() < 1) {
+			log.info("更新设备信息到缓存失败[需要更新的属性名及属性值为空]!");
+			result.setCode(1);
+			result.setInfo("更新设备信息到缓存失败[需要更新的属性名及属性值为空]!");
+
+		} else if (StringUtils.isBlank(devOnlyId)) {
+			log.info("更新设备信息到缓存失败[设备devOnlyId为空]!");
+			result.setCode(2);
+			result.setInfo("更新设备信息到缓存失败[设备devOnlyId为空]!");
+		} else {
+			boolean isExists=RedisUtil.getInstance().exists(
+					ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+			log.info("devOnlyId是否存在"+isExists);
+			for (Map.Entry<String, String> entry : fieldValueMap.entrySet()) {
+				try{
+				RedisUtil.getInstance().hset(
+						ICacheService.PREFIX_DEVICECACHE + devOnlyId,
+						entry.getKey(), entry.getValue());
+				}catch(Exception e)
+				{
+					log.info("更新设备信息到缓存失败!"+e.getMessage());
+					result.setCode(3);
+					result.setInfo("更新设备信息到缓存失败!"+e.getMessage());
+					return result;
+				}
+			}
+			log.info("更新设备信息到缓存成功!");
+			result.setCode(0);
+			result.setInfo("更新设备信息到缓存成功!");
+		}
+		return result;
+	}
+
+	@Override
+	public DeviceCache queryDevice(String maxCode, String minCode,
+			DeviceCache deviceCache) {
+		Result result = new Result();
+		List<DeviceCache> deviceCacheList=new ArrayList<DeviceCache>();	
+		if(!minCode.equals(ICacheService.QUERYDEVICE)){
+			log.info("查询设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("查询设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (deviceCache == null) {
+			log.info("查询设备信息到缓存失败[设备信息为空]!");
+			result.setCode(1);
+			result.setInfo("查询设备信息到缓存失败[设备信息为空]!");
+		} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+			log.info("查询设备信息到缓存失败[设备devOnlyId为空]!");
+			result.setCode(2);
+			result.setInfo("查询设备信息到缓存失败[设备devOnlyId为空]!");
+		} else {
+			Map<String, String> fieldValueMap = new HashMap<String, String>();
+			// 从缓存中取出的所有属性值给map
+			try{
+			fieldValueMap = RedisUtil.getInstance().hgetAll(
+					ICacheService.PREFIX_DEVICECACHE
+							+ deviceCache.getDevOnlyId());
+			}catch(Exception e)
+			{
+				log.info("查询设备信息到缓存失败["+e.getMessage()+"]");
+				result.setCode(3);
+				result.setInfo("查询设备信息到缓存失败["+e.getMessage()+"]");
+				deviceCache.clear();
+				return deviceCache;
+			}
+			if (fieldValueMap == null && fieldValueMap.size() < 1) {
+				log.info("从缓存中查询设备信息失败[输入 devOnlyId="
+						+ deviceCache.getDevOnlyId() + " 对应的值在缓存中未找到]!");
+				deviceCache.clear();
+				return deviceCache;
+			} else {
+				// 将查询出的Hash值依次对应让如到DeviceCache对象中，并返回
+				// 考虑可以写工具类
+				deviceCache = ReflectUtils.setMap2Ojbect(fieldValueMap,
+						deviceCache, DeviceCache.class);
+				log.info("从缓存中查询设备信息成功[输入 devOnlyId="
+						+ deviceCache.getDevOnlyId() + " 正确]");
+				result.setCode(0);
+				result.setInfo("从缓存中查询设备信息成功!");
+				return deviceCache;
+			}
+		}
+		deviceCache.clear();
+		return deviceCache;
+	}
+
+	@Override
+	public DeviceCache queryDeviceByIp(String maxCode, String minCode, String ip) {
+		Result result = new Result();		
+		DeviceCache deviceCache = new DeviceCache();
+		if(!minCode.equals(ICacheService.QUERYDEVICEBYIP)){
+			log.info("根据ip查询设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据ip查询设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (StringUtils.isBlank(ip)) {
+			log.info("从缓存中查询设备信息失败[输入 ip=" + ip + " 为空]!");
+			result.setCode(1);
+			result.setInfo("保存设备信息到缓存失败[设备信息为空]!");
+			
+		} else if (!StringUtils.isBlank(ip)) {
+			Map<String, String> fieldValueMap = new HashMap<String, String>();
+			// 从ip2DevOnlyIdService中查询到devOnlyId
+			String devOnlyId = Services.ip2DevOnlyIdService.queryIP2DevOnlyId(
+					ICacheService.SERVICE_CODE, ICacheService.QUERYIP2DEVONLYID, ip);
+			try{
+			fieldValueMap = RedisUtil.getInstance().hgetAll(
+					ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+			}
+			catch(Exception e)
+			{
+				log.info("查询设备信息到缓存失败["+e.getMessage()+"]");
+				result.setCode(3);
+				result.setInfo("查询设备信息到缓存失败["+e.getMessage()+"]");
+				deviceCache.clear();
+				return deviceCache;
+			}
+			if (fieldValueMap == null && fieldValueMap.size() < 1) {
+				log.info("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId
+						+ " 对应的值在缓存中未找到]!");
+				deviceCache.clear();
+				return deviceCache;
+			} else {
+				
+				// 将查询出的Hash值依次对应让如到DeviceCache对象中，并返回
+				// 考虑可以写工具类
+				deviceCache = ReflectUtils.setMap2Ojbect(fieldValueMap,
+						deviceCache, DeviceCache.class);
+				log.info("从缓存中查询设备信息成功[输入 devOnlyId=" + ip + " 正确]");
+				return deviceCache;
+			}
+		}
+		deviceCache.clear();
+		return deviceCache;
+	}
+
+	@Override
+	public Result deleteDevice(String maxCode, String minCode,
+			DeviceCache deviceCache) {
+		// TODO 自动生成的方法存根
+		Long tempResult = null;
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.DELETEDEVICE)){
+			log.info("删除设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("删除设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (deviceCache == null) {
+			log.info("从缓存中删除设备信息失败[需要删除的设备信息输入值为空]!]!");
+			result.setCode(1);
+			result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值为空]!");
+		}else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+			log.info("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId 为空]!");
+			result.setCode(2);
+			result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId为空]!");
+
+		} else {
+			try{
+			tempResult= RedisUtil.getInstance().delete(
+					ICacheService.PREFIX_DEVICECACHE
+							+ deviceCache.getDevOnlyId());
+			}
+			catch(Exception e)
+			{
+				log.info("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+				result.setCode(3);
+				result.setInfo("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+				tempResult=-1l;
+			}
+			if (tempResult >= 0) {
+				result.setCode(0);
+				result.setInfo("从缓存中删除设备信息成功!");
+			}
+			log.info("从缓存中删除设备信息返回为" + tempResult);
+		}
+		return result;
+	}
+
+	@Override
+	public Result deleteDeviceByIp(String maxCode, String minCode, String ip) {
+		Result result = new Result();
+		Long tempResult = null;
+		if(!minCode.equals(ICacheService.DELETEDEVICEBYIP)){
+			log.info("删除设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("删除设备信息参数不正确[功能号minCode不正确]!");
+
+		}
+		else if (StringUtils.isBlank(ip)) {
+			log.info("从缓存中删除设备信息失败[输入 ip=" + ip + " 为空]!");
+			result.setCode(1);
+			result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值ip为空]!");
+		} else {
+			Map<String, String> fieldValueMap = new HashMap<String, String>();
+			// 从ip2DevOnlyIdService中查询到devOnlyId
+			String devOnlyId = Services.ip2DevOnlyIdService.queryIP2DevOnlyId(
+					ICacheService.SERVICE_CODE, ICacheService.QUERYIP2DEVONLYID, ip);
+			try{
+			 tempResult = RedisUtil.getInstance().delete(
+					ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+			}
+			catch(Exception e)
+			{
+				log.info("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+				result.setCode(3);
+				result.setInfo("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+			}
+			if (tempResult >= 0) {
+				result.setCode(0);
+				result.setInfo("删除设备信息成功!");
+			}
+			log.info("从缓存中删除设备信息返回为" + tempResult);
+		}
+		return result;
+	}
+
+	@Override
+	public List<Result> batchSaveDevice(String maxCode, String minCode,
+			List<DeviceCache> deviceCacheList) {
+		Result result = new Result();
+		List<Result> resultList = new ArrayList<Result>();
+		
+		if(!minCode.equals(ICacheService.BATCHSAVEDEVICE)){
+			log.info("批量保存设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("批量保存设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+		for (DeviceCache deviceCache : deviceCacheList) {
+			if (deviceCache == null) {
+				log.info("批量保存设备信息到缓存失败[设备信息为空]!");
+				result.setCode(1);
+				result.setInfo("保存设备信息到缓存失败[设备信息为空]!");
+				resultList.add(result);
+			} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+				log.info("批量保存设备信息到缓存失败[设备devOnlyId为空]!");
+				result.setCode(2);
+				result.setInfo("批量保存设备信息到缓存失败[设备devOnlyId为空]!");
+				resultList.add(result);
+			} else {
+				DeviceBean deviceBean = new DeviceBean();
+				try {
+					// 把cache类里的数据传给实体类
+					BeanUtils.copyProperties(deviceBean, deviceCache);
+					// 用反射得到实体类的属性值
+					Map<String, String> fieldValueMap = ReflectUtils
+							.setObject2Map(deviceBean, DeviceBean.class);
+					// 把属性字段对应的值存入到Redis中
+					for (Map.Entry<String, String> entry : fieldValueMap
+							.entrySet()) {
+						try{
+						RedisUtil.getInstance().hset(
+								ICacheService.PREFIX_DEVICECACHE
+										+ deviceBean.getDevOnlyId(),
+								entry.getKey(), entry.getValue());
+						}
+						catch(Exception e)
+						{ 
+							
+							log.info("缓存batchSaveDevice异常!"+e.getMessage());
+							result.setCode(3);
+							result.setInfo("缓存batchSaveDevice异常![设备devOnlyId"+deviceCache.getDevOnlyId()+"异常]!");
+							resultList.add(result);
+						}
+					}
+					log.info("批量保存设备信息成功!devOnlyId:["+deviceBean.getDevOnlyId()+"]");
+					result.setCode(0);
+					result.setInfo("批量保存设备信息成功!devOnlyId:["+deviceBean.getDevOnlyId()+"]");
+					resultList.add(result);
+				} catch (IllegalAccessException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				} catch (InvocationTargetException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+		return resultList;
+	}
+
+	@Override
+	public List<Result> batchUpdateDevice(String maxCode, String minCode,
+			List<DeviceCache> deviceCacheList) {
+		Result result = new Result();
+		List<Result> resultList = new ArrayList<Result>();
+		if(!minCode.equals(ICacheService.BATCHUPDATEDEVICE)){
+			log.info("批量更新设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("批量更新设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+			for (DeviceCache deviceCache : deviceCacheList) {
+			if (deviceCache == null) {
+				log.info("批量更新设备信息到缓存失败[设备信息为空]!");
+				result.setCode(1);
+				result.setInfo("批量更新设备信息到缓存失败[设备信息为空]!");
+				resultList.add(result);
+			} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+				log.info("批量更新设备信息到缓存失败[设备devOnlyId为空]!");
+				result.setCode(2);
+				result.setInfo("批量更新设备信息到缓存失败[设备devOnlyId为空]!");
+				resultList.add(result);
+			} else {
+				DeviceBean deviceBean = new DeviceBean();
+				try {
+					// 把cache类里的数据传给实体类
+					BeanUtils.copyProperties(deviceBean, deviceCache);
+					// 用反射得到实体类的属性值
+					Map<String, String> fieldValueMap = ReflectUtils
+							.setObject2Map(deviceBean, DeviceBean.class);
+					// 把属性字段对应的值存入到Redis中
+					for (Map.Entry<String, String> entry : fieldValueMap
+							.entrySet()) {
+						try{
+						RedisUtil.getInstance().hset(
+								ICacheService.PREFIX_DEVICECACHE
+										+ deviceCache.getDevOnlyId(),
+								entry.getKey(), entry.getValue());
+						}
+						catch(Exception e)
+						{ 
+							
+							log.info("缓存batchUpdateDevice异常!"+e.getMessage());
+							result.setCode(3);
+							result.setInfo("缓存batchUpdateDevice异常![设备devOnlyId"+deviceCache.getDevOnlyId()+"异常]!");
+							resultList.add(result);
+						}
+					}
+					log.info("更新设备信息成功!");
+					result.setCode(0);
+					result.setInfo("更新设备信息成功!");
+					resultList.add(result);
+				} catch (IllegalAccessException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				} catch (InvocationTargetException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+		return resultList;
+	}
+
+	@Override
+	public List<DeviceCache> batchQueryDevice(String maxCode, String minCode,
+			List<DeviceCache> deviceCacheList) {
+		// TODO 自动生成的方法存根
+		List<DeviceCache> retdeviceCacheList = new ArrayList<DeviceCache>();
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.BATCHQUERYDEVICE)){
+			log.info("批量查询设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("批量查询设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+		for (DeviceCache deviceCache : retdeviceCacheList) {
+			if (deviceCache == null) {
+				log.info("批量查询设备信息到缓存失败[设备信息为空]!");
+				result.setCode(1);
+				result.setInfo("查询设备信息到缓存失败[设备信息为空]!");
+			} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+				log.info("批量查询设备信息到缓存失败[设备devOnlyId为空]!");
+				result.setCode(2);
+				result.setInfo("批量查询设备信息到缓存失败[设备devOnlyId为空]!");
+			} else {
+				Map<String, String> fieldValueMap = new HashMap<String, String>();
+				// 从缓存中取出的所有属性值给map
+				try{
+				fieldValueMap = RedisUtil.getInstance().hgetAll(
+						ICacheService.PREFIX_DEVICECACHE
+								+ deviceCache.getDevOnlyId());
+				}
+				catch(Exception e)
+				{
+					log.info("批量查询设备信息到缓存失败["+e.getMessage()+"]");
+					result.setCode(3);
+					result.setInfo("批量查询设备信息到缓存失败["+e.getMessage()+"]");
+					return retdeviceCacheList;
+				}
+				finally{
+					if (fieldValueMap == null && fieldValueMap.size() < 1) {
+					log.info("从缓存中查询设备信息失败[输入 devOnlyId="
+							+ deviceCache.getDevOnlyId() + " 对应的值在缓存中未找到]!");
+					return retdeviceCacheList;
+				} else {
+
+					// 将查询出的Hash值依次对应让如到DeviceCache对象中，并返回
+					// 考虑可以写工具类
+					deviceCache = ReflectUtils.setMap2Ojbect(fieldValueMap,
+							deviceCache, DeviceCache.class);
+					log.info("从缓存中查询设备信息成功[输入 devOnlyId="
+							+ deviceCache.getDevOnlyId() + " 正确]");
+					result.setCode(0);
+					result.setInfo("批量查询设备信息到成功!");
+					
+				}
+				}
+			}
+			retdeviceCacheList.add(deviceCache);
+		}
+	}
+		return retdeviceCacheList;
+	}
+
+	@Override
+	public List<DeviceCache> batchQueryDeviceByDevOnlyId(String maxCode,
+			String minCode, List<String> devOnlyIdList) {
+		Result result = new Result();
+		List<DeviceCache> retDeviceCacheList = new ArrayList<DeviceCache>();
+		
+		if(!minCode.equals(ICacheService.BATCHQUERYDEVICEBYDEVONLYID)){
+			log.info("根据devOnlyId批量查询设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据devOnlyId批量查询设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+		for (String devOnlyId : devOnlyIdList) {
+			DeviceCache deviceCache = new DeviceCache();
+			if (StringUtils.isBlank(devOnlyId)) {
+				log.info("批量查询设备信息失败[输入 devOnlyId=" + devOnlyId + " 为空]!");
+				result.setCode(2);
+				result.setInfo("批量查询设备设备信息失败[需要查询的设备信息输入值devOnlyId为空]!");
+				return null;
+			} else {
+				Map<String, String> fieldValueMap = new HashMap<String, String>();
+				// 从缓存中取出的所有属性值给map
+			   try{
+				fieldValueMap = RedisUtil.getInstance().hgetAll(
+						ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+				
+			   }
+			   catch(Exception e)
+			   {
+				   log.info("批量查询设备信息到缓存失败["+e.getMessage()+"]");
+				   result.setCode(3);
+				   result.setInfo("批量查询设备信息到缓存失败["+e.getMessage()+"]");
+				   return retDeviceCacheList;
+			   }finally{  
+				if (fieldValueMap == null || fieldValueMap.size() < 1) {
+					log.info("从缓存中查询设备信息失败[输入 devOnlyId=" + devOnlyId
+							+ " 对应的值在缓存中未找到]!");
+					return retDeviceCacheList;
+				} else {
+					
+					// 将查询出的Hash值依次对应让如到DeviceCache对象中，并返回
+					// 考虑可以写工具类
+					deviceCache = ReflectUtils.setMap2Ojbect(fieldValueMap,
+							deviceCache, DeviceCache.class);
+					log.info("从缓存中查询设备信息成功[输入 devOnlyId=" + devOnlyId + " 正确]");				
+				}
+			   }
+			}
+			retDeviceCacheList.add(deviceCache);
+		}
+		}
+		return retDeviceCacheList;
+	}
+
+	@Override
+	public List<Result> batchDeleteDevice(String maxCode, String minCode,
+			List<DeviceCache> deviceCacheList) {
+		Result result = new Result();
+		List<Result> resultList = new ArrayList<Result>();
+		Long tempResult = null ;
+		if(!minCode.equals(ICacheService.BATCHDELETEDEVICE)){
+			log.info("批量删除设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("批量删除设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+		for (DeviceCache deviceCache : deviceCacheList) {
+			// TODO 自动生成的方法存根
+			if (deviceCache == null) {
+				log.info("从缓存中删除设备信息失败[需要删除的设备信息输入值为空]!");
+				result.setCode(1);
+				result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值为空]!");
+				resultList.add(result);
+			} else if (StringUtils.isBlank(deviceCache.getDevOnlyId())) {
+				log.info("从缓存中批量删除设备信息失败[需要删除的设备信息输入值devOnlyId="
+						+ deviceCache.getDevOnlyId() + " 为空]!");
+				result.setCode(2);
+				result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId为空]!");
+				resultList.add(result);
+			} else {
+				 try{
+				 tempResult = RedisUtil.getInstance().delete(
+						ICacheService.PREFIX_DEVICECACHE
+								+ deviceCache.getDevOnlyId());
+				 }
+				 catch(Exception e)
+					{
+						log.info("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+						result.setCode(3);
+						result.setInfo("从缓存中删除设备信息失败["+e.getMessage()+"]!");
+					}
+				 if (tempResult >= 0) {
+					result.setCode(0);
+					result.setInfo("删除设备信息成功!");
+					resultList.add(result);
+				}
+
+				log.info("从缓存中删除设备信息返回为" + tempResult);
+
+			}
+
+		}
+		}
+		return resultList;
+	}
+
+	
+	
+	@Override
+	public List<Result> batchDeleteDeviceByDevOnlyId(String maxCode,
+			String minCode, List<String> devOnlyIdList) {
+		// TODO 自动生成的方法存根
+		List<Result> resultList = new ArrayList<Result>();
+		Long tempResult = null ;
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.BATCHDELETEDEVICEBYDEVONLYID)){
+			log.info("根据devOnlyId批量删除设备信息参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("根据devOnlyId批量删除设备信息参数不正确[功能号minCode不正确]!");
+
+		}else{
+		for (String devOnlyId : devOnlyIdList) {
+			if (StringUtils.isBlank(devOnlyId)) {
+				log.info("从缓存中批量删除设备信息失败[需要删除的设备信息输入值devOnlyId=" + devOnlyId
+						+ " 为空]!");
+				result.setCode(2);
+				result.setInfo("从缓存中删除设备信息失败[需要删除的设备信息输入值devOnlyId为空]!");
+				resultList.add(result);
+			} else {
+				try{
+				 tempResult = RedisUtil.getInstance().delete(
+						ICacheService.PREFIX_DEVICECACHE + devOnlyId);
+				}
+				 catch(Exception e)
+					{
+						log.info("从缓存中删除设备"+devOnlyId+"信息失败["+e.getMessage()+"]!");
+						result.setCode(3);
+						result.setInfo("从缓存中删除设备"+devOnlyId+"信息失败["+e.getMessage()+"]!");
+						tempResult=-1l;
+						resultList.add(result);
+					}
+				finally{
+					if (tempResult >= 0) {
+					log.info("从缓存中删除设备"+devOnlyId+"信息成功!");
+					result.setCode(0);
+					result.setInfo("从缓存中删除设备"+devOnlyId+"信息成功!!");
+					resultList.add(result);
+				}
+				}
+
+				log.info("从缓存中删除设备信息返回为" + tempResult);
+			}
+
+		}
+		}
+		return resultList;
+	}
+
+}

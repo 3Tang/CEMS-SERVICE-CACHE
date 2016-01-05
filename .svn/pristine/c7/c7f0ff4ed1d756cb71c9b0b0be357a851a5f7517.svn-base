@@ -1,0 +1,35 @@
+/**   
+* @Title: JedisCommandPlus.java 
+* @Package com.vrv.cems.service.cache.util 
+* @Description: TODO(用一句话描述该文件做什么) 
+* @author tangtieqiao
+		   tangtieqiao@vrvmail.com.cn
+* @date 2015年8月6日 上午10:17:38 
+* @version V1.0   
+*/
+package com.vrv.cems.service.cache.util;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import redis.clients.jedis.BasicCommands;
+import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.DebugParams;
+import redis.clients.jedis.JedisCommands;
+import redis.clients.jedis.ScanResult;
+import redis.clients.jedis.SortingParams;
+
+/** 
+ * @ClassName: JedisCommandPlus 
+ * @Description: TODO(这里用一句话描述这个类的作用) 
+ * @author tangtieqiao
+			tangtieqiao@vrvmail.com.cn
+ * @date 2015年8月6日 上午10:17:38 
+ *  
+ */
+public interface JedisCommandPlus extends JedisCommands,BasicCommands{
+	public String flushDB();
+	public Set<String> keys(String key) ;
+	
+}

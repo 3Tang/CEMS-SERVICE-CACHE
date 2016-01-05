@@ -1,0 +1,73 @@
+/**   
+* @Title: JedisRwRw.java 
+* @Package com.vrv.cems.service.cache.util 
+* @Description: TODO(用一句话描述该文件做什么) 
+* @author tangtieqiao
+		   tangtieqiao@vrvmail.com.cn
+* @date 2015年8月6日 上午10:23:19 
+* @version V1.0   
+*/
+package com.vrv.cems.service.cache.util;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import redis.clients.jedis.AdvancedJedisCommands;
+import redis.clients.jedis.BinaryClient;
+import redis.clients.jedis.BinaryClient.LIST_POSITION;
+import redis.clients.jedis.BinaryJedis;
+import redis.clients.jedis.BitOP;
+import redis.clients.jedis.BitPosParams;
+import redis.clients.jedis.BuilderFactory;
+import redis.clients.jedis.Client;
+import redis.clients.jedis.ClusterCommands;
+import redis.clients.jedis.DebugParams;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPubSub;
+import redis.clients.jedis.JedisShardInfo;
+import redis.clients.jedis.MultiKeyCommands;
+import redis.clients.jedis.Protocol;
+import redis.clients.jedis.ScanParams;
+import redis.clients.jedis.ScanResult;
+import redis.clients.jedis.ScriptingCommands;
+import redis.clients.jedis.SortingParams;
+import redis.clients.jedis.ZParams;
+import redis.clients.util.Pool;
+import redis.clients.util.SafeEncoder;
+import redis.clients.util.Slowlog;
+
+/** 
+ * @ClassName: JedisRwRw 
+ * @Description: TODO(这里用一句话描述这个类的作用) 
+ * @author tangtieqiao
+			tangtieqiao@vrvmail.com.cn
+ * @date 2015年8月6日 上午10:23:19 
+ *  
+ */
+public class JedisRw extends Jedis implements JedisCommandPlus{
+
+	/** 
+	* <p>Title: </p> 
+	* <p>Description: </p> 
+	* @param host
+	* @param port 
+	*/
+	public JedisRw(String host, int port) {
+		super(host, port);
+		// TODO 自动生成的构造函数存根
+	}
+
+	
+	public JedisRw(String host, int port,int timeout) {
+		super(host, port,timeout);
+		// TODO 自动生成的构造函数存根
+	}
+	
+	
+}

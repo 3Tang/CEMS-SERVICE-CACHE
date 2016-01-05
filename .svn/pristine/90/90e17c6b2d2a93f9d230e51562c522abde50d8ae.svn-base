@@ -1,0 +1,198 @@
+package com.vrv.cems.service.cache.service.impl;
+
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+
+import org.apache.commons.lang3.CharSequenceUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import com.vrv.cems.service.base.SystemConstants;
+import com.vrv.cems.service.base.bean.cache.Result;
+import com.vrv.cems.service.base.interfaces.ICacheService;
+import com.vrv.cems.service.cache.ServiceMain;
+import com.vrv.cems.service.cache.service.PtpService;
+import com.vrv.cems.service.cache.util.PolicyConfigService;
+import com.vrv.cems.service.cache.util.RedisUtil;
+import com.vrv.cems.service.quartz.ServiceParamBean;
+import com.vrv.cems.service.quartz.ServiceParamBean.ParamBean;
+import com.sun.xml.internal.org.jvnet.staxex.Base64Data;
+
+public class PtpServiceImpl implements PtpService{
+	private static  int ptpExpiredTime;
+	static{
+		
+		List<ParamBean> params=ServiceMain.serviceParamBean.getParams();
+		for(ParamBean param:params)
+		{
+			if("ptpExpiredTime".equalsIgnoreCase(param.getKey()))
+			{
+				ptpExpiredTime=Integer.parseInt(param.getValue());
+			}
+		}
+
+	}
+	
+	
+	@Override
+	public Result savePtp(String maxCode, String minCode, String uuid,
+			String ptpResult) {
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.SAVEPTP)){
+			log.info("保存点对点缓存数据参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("保存点对点缓存数据参数不正确[功能号minCode不正确]!");
+
+		}else if (StringUtils.isBlank(uuid)) {
+			log.info("保存点对点缓存数据到缓存失败[uuid为空]!");
+			result.setCode(1);
+			result.setInfo("保存点对点缓存数据到缓存失败[uuid为空]!");
+		} else if (StringUtils.isBlank(ptpResult)) {
+			log.info("保存点对点缓存数据到缓存失败[ptpResult为空]!");
+			result.setCode(2);
+			result.setInfo("保存点对点缓存数据到缓存失败[ptpResult为空]!");
+		}else {
+			try{
+				log.info("点对点的过期时间为"+ptpExpiredTime);
+				//setex(String key,int seconds,String value)
+			RedisUtil.getInstance().setex(
+					ICacheService.PREFIX_PTPCACHE+uuid,ptpExpiredTime,ptpResult);
+			log.info("保存点对点缓存数据到缓存成功!");
+			result.setCode(0);
+			result.setInfo("保存点对点缓存数据到缓存成功![uuid为"+uuid+"]!");
+			}
+			catch(Exception e)
+			{ 
+				
+				log.info("缓存savePtp异常!"+e.getMessage());
+				result.setCode(3);
+				result.setInfo("缓存savePtp异常!");
+				return result;
+			}
+		
+		}
+		return result;
+	}
+
+	@Override
+	public Result updatePtp(String maxCode, String minCode, String uuid,
+			String ptpResult) {
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.UPDATEPTP)){
+			log.info("更新点对点缓存数据参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("保存点对点缓存数据参数不正确[功能号minCode不正确]!");
+
+		}else if (StringUtils.isBlank(uuid)) {
+			log.info("更新点对点缓存数据到缓存失败[uuid为空]!");
+			result.setCode(1);
+			result.setInfo("更新点对点缓存数据到缓存失败[uuid为空]!");
+		} else if (StringUtils.isBlank(ptpResult)) {
+			log.info("更新点对点缓存数据到缓存失败[ptpResult为空]!");
+			result.setCode(2);
+			result.setInfo("保存点对点缓存数据到缓存失败[mac为空]!");
+		} else {
+			try{
+				RedisUtil.getInstance().setex(
+						ICacheService.PREFIX_PTPCACHE+uuid,ptpExpiredTime,ptpResult);
+			log.info("更新点对点缓存数据到缓存成功!");
+			result.setCode(0);
+			result.setInfo("更新点对点缓存数据到缓存成功!");
+			}
+			catch(Exception e)
+			{ 
+				
+				log.info("缓存updatePtp异常!"+e.getMessage());
+				result.setCode(3);
+				result.setInfo("缓存updatePtp异常!["+e.getMessage()+"]!");
+				return result;
+			}
+			
+		}
+		return result;
+	}
+
+	@Override
+	public String queryPtp(String maxCode, String minCode, String uuid)  {
+		Result result = new Result();
+		byte[] a=new byte['\0'];
+		Base64Data bd=new Base64Data();
+		String ptpResult = "";//bd.toString()+new String("\0");
+		try {
+			ptpResult = new String(a,"UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			// TODO 自动生成的 catch 块
+			e1.printStackTrace();
+		}
+		if(!minCode.equals(ICacheService.QUERYPTP)){
+			log.info("查询点对点缓存数据参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("查询点对点缓存数据参数不正确[功能号minCode不正确]!");
+
+		}else if (StringUtils.isBlank(uuid)) {
+			log.info("查询点对点缓存数据到缓存失败[uuid为空]!");
+			result.setCode(1);
+			result.setInfo("查询点对点缓存数据到缓存失败[uuid为空]!");
+		}  else {
+			try{
+			ptpResult=RedisUtil.getInstance().get(
+					ICacheService.PREFIX_PTPCACHE+uuid);
+			if(StringUtils.isNotBlank(ptpResult)){
+			log.info("查询点对点缓存数据到缓存成功!");
+			result.setCode(0);
+			result.setInfo("查询点对点缓存数据到缓存成功!");
+			}
+			}
+			catch(Exception e)
+			 {	 
+				 log.info("从缓存中查询点对点缓存数据失败[ptpResult=" + ptpResult
+							+ " 对应的值在缓存中未找到]!"+e.getLocalizedMessage());
+				    result.setCode(3);
+					result.setInfo("从缓存中查询点对点缓存数据失败[ptpResult=" + ptpResult
+							+ " 对应的值在缓存中未找到]!");
+					ptpResult= bd.toString()+new String("\0");
+					return ptpResult;
+			 }
+			
+		}
+		return ptpResult;
+	}
+
+	@Override
+	public Result deletePtp(String maxCode, String minCode, String uuid) {
+		Long tempResult;
+		Result result = new Result();
+		if(!minCode.equals(ICacheService.DELETEPTP)){
+			log.info("删除点对点缓存数据参数不正确[功能号minCode不正确]!");
+			result.setCode(4);
+			result.setInfo("删除点对点缓存数据参数不正确[功能号minCode不正确]!");
+
+		}else if (StringUtils.isBlank(uuid)) {
+			
+			log.info("删除点对点缓存数据到缓存失败[uuid为空]!");
+			result.setCode(1);
+			result.setInfo("保存点对点缓存数据到缓存失败[uuid为空]!");
+		}  else {
+			
+			try{
+			 tempResult = RedisUtil.getInstance().delete(ICacheService.PREFIX_PTPCACHE +uuid);
+			}
+			catch(Exception e)
+			{
+				log.info("从缓存中删除设备信息失败!"+e.getMessage());
+				result.setCode(3);
+				result.setInfo("从缓存中删除设备信息失败!"+e.getMessage());
+				tempResult=-1l;
+				return result;
+			}
+			if (tempResult >= 0) {
+				result.setCode(0);
+				result.setInfo("从缓存中删除点对点缓存数据成功");
+			}
+
+			log.info("删除返回为" + tempResult);
+		}
+		return result;
+	}
+	
+
+}

@@ -1,0 +1,41 @@
+/**   
+* @Title: JedisRwRw.java 
+* @Package com.vrv.cems.service.cache.util 
+* @Description: TODO(用一句话描述该文件做什么) 
+* @author tangtieqiao
+		   tangtieqiao@vrvmail.com.cn
+* @date 2015年8月6日 上午10:23:19 
+* @version V1.0   
+*/
+package com.vrv.cems.service.cache.util;
+
+import redis.clients.jedis.Jedis;
+import redis.clients.util.Pool;
+
+import com.vrv.cems.service.cache.interfaces.JedisBase;
+import com.vrv.cems.service.cache.pool.SingleJedisPool;
+
+/** 
+ * @ClassName: JedisRw
+ * @Description: TODO(这里用一句话描述这个类的作用) 
+ * @author tangtieqiao
+			tangtieqiao@vrvmail.com.cn
+ * @date 2015年8月6日 上午10:23:19 
+ *  
+ */
+public class SingleJedis extends Jedis implements JedisBase{
+
+	public SingleJedis(String host, int port) {
+		super(host, port);
+		// TODO 自动生成的构造函数存根
+	}
+
+	
+	public SingleJedis(String host, int port,int timeout) {
+		super(host, port,timeout);
+		// TODO 自动生成的构造函数存根
+	}
+
+
+	
+}

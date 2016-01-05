@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+	<thriftBean selectorThreads="2" workerThreads="400" />
+
+	<logBean logLevel="ERROR" logPath="D:/logs/Sys.log" />
+
+	<!-- 服务自身配置-->
+	<params> 
+		<!--缓存点对点数据 有效期配置，单位：秒-->
+      <paramBean key="ptpExpiredTime" value="300"/>
+      <paramBean key="deviceAliveTime" value="9"></paramBean>
+	</params>
+
+	<timers>
+
+		<!--定时清理设备在线信息策略 -->
+		<timerBean>
+			<name>deviceOnlineJob</name><!--定时器名称 -->
+			<group>deviceOnlineGroup</group>
+			<trigger>deivceOnlineTrigger</trigger>
+			<cycle>0 * 0/3 * * ?</cycle><!--定时器执行周期 -->
+		</timerBean>
+		<timerBean>
+			<name>policyCacheJob</name>
+			<group>policyCache</group>
+			<trigger>policyCacheTrigger</trigger>
+			<cycle>0 5/30 * * * ?</cycle>
+		</timerBean>
+		<timerBean>
+			<name>deviceCacheJob</name>
+			<group>deviceCache</group>
+			<trigger>deviceCacheTrigger</trigger>
+			<cycle>0 7/60 * * * ?</cycle>
+		</timerBean>
+		<timerBean>
+			<name>userCacheJob</name>
+			<group>userCache</group>
+			<trigger>userCacheTrigger</trigger>
+			<cycle>0 10/50 * * * ?</cycle>
+		</timerBean>
+		<timerBean>
+			<name>productCacheJob</name>
+			<group>productCache</group>
+			<trigger>productCacheTrigger</trigger>
+			<cycle>0 0 1 * * ?</cycle>
+		</timerBean>
+		<timerBean>
+			<name>PolicyXmlJob</name>
+			<group>PolicyXmlGroup</group>
+			<trigger>PolicyXmlTrigger</trigger>
+			<cycle>0 * 0/3 * * ?</cycle>
+		</timerBean>
+	</timers>
+</root>

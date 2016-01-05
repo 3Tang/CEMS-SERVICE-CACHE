@@ -1,0 +1,17 @@
+package com.vrv.cems.service.init;
+
+import com.vrv.cems.service.base.SystemConstants;
+
+public class CacheServiceConstants extends SystemConstants{
+
+	public static final String PREFIX_DEVICECACHE = "device";
+	public static final String SERVICE_CODE = "";
+	public static final String SAVEDEVICE = null;
+	public static final String QUERYDEVICEBYDEVONLYID = null;
+	public static final String DELETEDEVICEBYDEVONLYID = null;
+	public static final int ERROR_24 = 24;
+	public static final String F_SUCCESS = "0";
+	public static final String F_FAIL = "1";
+	
+    public static final int DEVICE_LOGOUT_TYPE=2;
+}

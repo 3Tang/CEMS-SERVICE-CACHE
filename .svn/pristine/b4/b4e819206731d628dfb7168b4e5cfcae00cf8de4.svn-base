@@ -1,0 +1,13 @@
+path.config.properties=target/classes/config.properties
+path.log4j.properties=target/classes/log4j.properties
+<<<<<<< .mine
+path.jdbc.properties=target/classes/jdbc.properties
+path.config.xml=target/classes/config.xml
+path.ehcache.xml=target/classes/ehcache.xml
+path.policy.xml=target/classes/policy.xml
+path.timer.xml=target/classes/timer.xml
+=======
+>>>>>>> .r60006
+path.redis.properties=target/classes/redis.properties
+path.policy.xml=target/classes/policy.xml
+path.jdbc.properties=target/test-classes/jdbc.properties

@@ -1,0 +1,433 @@
+package com.vrv.cems.service.quartz;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.dbutils.handlers.MapListHandler;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+
+import com.sys.common.util.Assert;
+import com.sys.common.util.StringUtils;
+import com.sys.common.util.UUIDUtils;
+import com.sys.common.util.security.AESUtils;
+import com.vrv.cems.service.base.SystemConstants;
+import com.vrv.cems.service.base.bean.cache.DeviceCache;
+import com.vrv.cems.service.base.bean.cache.DeviceOnlineCache;
+import com.vrv.cems.service.base.bean.cache.Result;
+import com.vrv.cems.service.base.interfaces.ICacheService;
+import com.vrv.cems.service.cache.core.Services;
+import com.vrv.cems.service.cache.util.RedisUtil;
+import com.vrv.cems.service.cache.util.XmlUtil;
+import com.vrv.cems.service.dbtools.DBUtil;
+import com.vrv.cems.service.init.CacheServiceConstants;
+import com.vrv.cems.service.quartz.ServiceParamBean.ParamBean;
+
+/**
+ * 清理设备在线信息策略JOB
+ * 
+ * @author 作 者 名：唐铁桥; E-mail ：tangtieqiao@vrvmail.com.cn
+ * 
+ * @version 版 本 号：V1.0; 创建时间：2015年5月9日 上午10:09:41
+ */
+public class DeviceOnlineJob implements Job {
+	private static final Logger log = Logger.getLogger(DeviceOnlineJob.class);
+	private static final String CEMS_DEVICE_TABLE_NAME = "cems_device";
+	Long limitTime;
+	private ServiceParamBean ServParamBean;
+	// true超时false不超时
+	boolean isOvertime;
+	Set<String> devOnlyIdSet = new HashSet<String>();
+	private static Result devOnlineResult=new Result();
+	private static  Result devKeyResult=new Result();
+	Date clientDate = new Date();
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	String clientTime = sdf.format(clientDate);
+    String reportTime=clientTime;
+	
+	@Override
+	public void execute(JobExecutionContext paramJobExecutionContext)
+			throws JobExecutionException {
+		// 取缓存的值和配置文件中的值比较
+		// 若两者之差大于配置文件设定的值 则 执行 设备登出操作
+		// 设备登出操作 除了清理缓存 还要修改数据库的里的isOpened字段
+		// 初始化 当前时间 缓存中的值
+		log.info("心跳超时清理定时器开始执行...");
+		try {
+			init();
+		} catch (Exception e1) {
+			// TODO 自动生成的 catch 块
+			e1.printStackTrace();
+		}
+		// 比较操作返回结果
+		if (devOnlyIdSet.size() > 0) {
+			Iterator iterator = devOnlyIdSet.iterator();
+			while (iterator.hasNext()) {
+				boolean isOverTime=false;
+				DeviceOnlineCache deviceOnlineCache = new DeviceOnlineCache();
+				String devOnlineKey = (String) iterator.next();
+				String devOnlyId = devOnlineKey.replace(
+						ICacheService.PREFIX_DEVICEONLINECACHE, "");
+				deviceOnlineCache = Services.deviceOnlineService
+						.queryDeviceOnlineByDevOnlyId(
+								ICacheService.SERVICE_CODE,
+								ICacheService.QUERYDEVICEONLINEBYDEVONLYID,
+								devOnlyId);
+
+				String activeTimeStr = deviceOnlineCache.getActiveTime();
+				try {
+					if(StringUtils.isNotBlank(activeTimeStr)){
+						isOverTime=isOverTime(activeTimeStr);
+					}
+				} catch (ParseException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				}
+				//若超时则执行清理操作
+				if(isOverTime)
+				{
+					boolean operResult=operate(devOnlyId);
+					if(operResult)
+					{
+						log.info("清理设备在线成功!");
+					}
+					else
+					{
+						log.info("清理设备在线失败!");
+					}
+				}
+			
+			}
+
+		}
+		log.info("心跳超时清理定时器执行结束...");
+		
+	}
+
+	@Test
+	public void executeTest()
+			throws Exception {
+		// 取缓存的值和配置文件中的值比较
+		// 若两者之差大于配置文件设定的值 则 执行 设备登出操作
+		// 设备登出操作 除了清理缓存 还要修改数据库的里的isOpened字段
+		// 初始化 当前时间 缓存中的值
+		init();
+		// 比较操作返回结果
+		if (devOnlyIdSet.size() > 0) {
+			Iterator iterator = devOnlyIdSet.iterator();
+			while (iterator.hasNext()) {
+				boolean isOverTime=false;
+				DeviceOnlineCache deviceOnlineCache = new DeviceOnlineCache();
+				String devOnlineKey = (String) iterator.next();
+				String devOnlyId = devOnlineKey.replace(
+						ICacheService.PREFIX_DEVICEONLINECACHE, "");
+				deviceOnlineCache = Services.deviceOnlineService
+						.queryDeviceOnlineByDevOnlyId(
+								ICacheService.SERVICE_CODE,
+								ICacheService.QUERYDEVICEONLINEBYDEVONLYID,
+								devOnlyId);
+
+				String activeTimeStr = deviceOnlineCache.getActiveTime();
+				try {
+					if(StringUtils.isNotBlank(activeTimeStr)){
+						isOverTime=isOverTime(activeTimeStr);
+					}else
+					{
+						isOverTime=true;
+					}
+				} catch (ParseException e) {
+					// TODO 自动生成的 catch 块
+					e.printStackTrace();
+				}
+				//若超时则执行清理操作
+				if(isOverTime)
+				{
+					boolean operResult=operate(devOnlyId);
+					if(operResult)
+					{
+						log.info("清理设备在线成功!");
+					}
+					else
+					{
+						log.info("清理设备在线失败!");
+					}
+				}
+			
+			}
+
+		}
+		
+		
+	}
+	
+
+	private boolean operate(String devOnlyId) {
+		// TODO 自动生成的方法存根
+		// 删除 设备在线缓存表 和 设备会话表
+		
+		 devOnlineResult= Services.deviceOnlineService
+		   .deleteDeviceOnlineByDevOnlyId(
+					ICacheService.SERVICE_CODE,
+					ICacheService.DELETEDEVICEONLIEBYDEVONLYID,
+					devOnlyId);
+		 //System.out.println("devOnlineResult.getCode()"+devOnlineResult.getCode());
+		if(devOnlineResult.getCode()!=0)
+		{
+			log.error("心跳超时清理定时器 清理 设备在线缓存 失败!");
+		}else
+		{
+			log.info("心跳超时清理定时器 清理 设备在线缓存 成功!");
+		}
+		
+		 devKeyResult= Services.deviceKeyService
+				   .deleteDeviceKeyByDevOnlyId(
+							ICacheService.SERVICE_CODE,
+							ICacheService.DELETEDEVICEKEYBYDEVONLYID,
+							devOnlyId);
+		 //System.out.println("devKeyResult.getCode()"+devKeyResult.getCode());
+				if(devKeyResult.getCode()!=0)
+				{
+					log.error("心跳超时清理定时器 清理 设备会话秘钥 失败!");
+				}else
+				{
+					log.info("心跳超时清理定时器 清理 设备会话秘钥 成功!");
+				}
+				
+				
+				//根据user_device的关系,删除用户在线的缓存数据
+				List<String> userOnlyIds=DBUtil.getUserOnlyIdByDevOnlyId(devOnlyId);
+				if(userOnlyIds!=null&userOnlyIds.size()>1)
+				{
+					for(String userOnlyId:userOnlyIds){
+						Services.userOnlineService.deleteUserOnlineByUserOnlyId(ICacheService.SERVICE_CODE, ICacheService.DELETEUSERONLINEBYUSERONLYID, userOnlyId);
+					}
+				}
+				
+				//更改数据库状态
+				updateDB(devOnlyId);
+				//System.out.println("devOnlineResult.getCode()"+devOnlineResult.getCode());
+				//System.out.println("devKeyResult.getCode()"+devKeyResult.getCode());
+			if(devOnlineResult.getCode()==0&&devKeyResult.getCode()==0)
+			{
+				return true;
+			}	
+			else
+			{
+				return false;
+			}
+		
+			
+	}
+
+
+	//清理数据库的逻辑同在线服务 的 设备登出逻辑
+	 void updateDB(String devOnlyId) {
+			updateUserDevice(devOnlyId);	
+			updateDeviceOnline(devOnlyId);
+			updateUserDeviceLoginLog(devOnlyId);	
+	}
+
+
+
+	private void updateUserDeviceLoginLog(String devOnlyId)  {
+		MapListHandler mapListHandler = new MapListHandler();
+		String querySql = "select userOnlyId from cems_user_device where devOnlyId=?";
+		Object[] params = { devOnlyId };
+		List<Map<String, Object>> mapList = null;
+		try {
+			mapList = DBUtil.queryRunner.query(querySql, mapListHandler, params);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (mapList != null&mapList.size()>1) {
+			for (Map<String, Object> map : mapList) {
+				if (map != null) {
+					String id = UUIDUtils.get32UUID();
+					String userOnlyId = map.get("userOnlyId").toString();
+					String loginTime = map.get("loginTime").toString();
+					String userAccount = map.get("loginAccount").toString();
+					DeviceCache  deviceCache=Services.deviceService.queryDeviceByDevOnlyId(ICacheService.SERVICE_CODE, ICacheService.QUERYDEVICEBYDEVONLYID, devOnlyId);
+					String ip=deviceCache.getIp()==null?"ip":deviceCache.getIp();
+					String mac=deviceCache.getIp()==null?"mac":deviceCache.getMac();
+					int type = CacheServiceConstants.DEVICE_LOGOUT_TYPE;
+					int fromType = 1;
+					String osLoginAccount=userAccount;
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					Date lastLoginDate = null;
+					try {
+						lastLoginDate = sdf.parse(loginTime);
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					Long lastLoginTime = lastLoginDate.getTime();
+					Long currentTime = System.currentTimeMillis();
+					String onlineTime = getDayHourMinuteSecond(currentTime
+							- lastLoginTime);
+					insertUserLoginLog(id, userAccount, devOnlyId, ip, mac,
+							osLoginAccount, type, clientTime, userOnlyId,
+							reportTime, onlineTime, fromType);
+					
+	
+					type = CacheServiceConstants.DEVICE_LOGOUT_TYPE;
+					insertDeviceLoginLog(id, userAccount, devOnlyId, ip, mac,
+							osLoginAccount, type, clientTime, userOnlyId, reportTime,
+							onlineTime, fromType);
+				}
+			}
+		}
+	}
+	
+	private static void insertDeviceLoginLog(String id, String userAccount,
+			String devOnlyId, String ip, String mac, String osLoginAccount,
+			int type, String clientTime, String userOnlyId, String reportTime,
+			String onlineTime, int fromType) {
+		String insertSql = "insert into cems_log_device_clientlog(id,regUserOnlyId,regUserAccount,devOnlyId,ip,mac,clientTime,reportTime,osLoginAccount,type,onlineTime) values(?,?,?,?,?,?,?,?,?,?,?)";
+		Object[] insertParams = { id, userOnlyId, userAccount, devOnlyId, ip,
+				mac, clientTime, reportTime, osLoginAccount, type, onlineTime};
+		try {
+			DBUtil.queryRunner.update(insertSql, insertParams);
+			log.info("写入cems_log_device_loginlog成功!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+	}
+	
+	private static synchronized void insertUserLoginLog(String id,
+			String userAccount, String devOnlyId, String ip, String mac,
+			String osLoginAccount, int type, String clientTime,
+			String userOnlyId, String reportTime, String onlineTime,
+			int fromType) {
+		String insertSql = "insert into cems_log_user_loginlog(id,userOnlyId,userAccount,devOnlyId,ip,mac,clientTime,reportTime,osLoginAccount,type,onlineTime,fromType) values(?,?,?,?,?,?,?,?,?,?,?,?)";
+		Object[] insertParams = { id, userOnlyId, userAccount, devOnlyId, ip,
+				mac, clientTime, reportTime, osLoginAccount, type, onlineTime,
+				fromType };
+		try {
+			DBUtil.queryRunner.update(insertSql, insertParams);
+			log.info("写入cems_log_user_loginlog成功!");
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+	}
+
+	public static String getDayHourMinuteSecond(long timeMillis) {
+
+		long totalSeconds = timeMillis / 1000;
+
+		int second = (int) (totalSeconds % 60);// 秒
+
+		long totalMinutes = totalSeconds / 60;
+
+		int minute = (int) (totalMinutes % 60);// 分
+
+		long totalHours = totalMinutes / 60;
+
+		int hour = (int) (totalHours % 24);// 时
+
+		int totalDays = (int) (totalHours / 24);
+
+		return totalDays + "天" + hour + "小时" + minute + "分" + second + "秒";
+
+	}
+
+
+	private void updateDeviceOnline(String devOnlyId) {
+		String delSql = "delete  from cems_device_online where devOnlyId=?";
+		Object[] delParams = { devOnlyId };
+		try {
+			DBUtil.queryRunner.update(delSql, delParams);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+
+
+	private void updateUserDevice(String devOnlyId) {
+		String deleteSql = "delete from cems_user_device where devOnlyId=?";
+		Object[] deleteParam = { devOnlyId };
+		try {
+			DBUtil.queryRunner.update(deleteSql, deleteParam);
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+	}
+	
+	
+
+	private boolean isOverTime(String activeTimeStr) throws ParseException {
+		// TODO 自动生成的方法存根
+		SimpleDateFormat sdf = new SimpleDateFormat(
+				"yyyy-MM-dd HH:mm:ss");
+		long currentTime = System.currentTimeMillis();
+		long activeTime = sdf.parse(activeTimeStr).getTime();
+		
+		if((currentTime-activeTime)/(60*1000)>limitTime)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
+
+	
+	public void init() throws Exception {
+		// 遍历设备在线中的deviceOnlyId
+		devOnlyIdSet = RedisUtil.getInstance().keys(
+				ICacheService.PREFIX_DEVICEONLINECACHE + "*");
+		// 从xml文件中取
+		// 获取路径
+		String policyPath = SystemConstants.PATH_POLICY_XML;
+		InputStream ins;
+		try {
+			ins = new FileInputStream(policyPath);
+			ServParamBean = XmlUtil.xmlToObject(ins, ServiceParamBean.class);
+		} catch (FileNotFoundException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+			
+		// 取出来的结构是一个List
+		if(ServiceParamBean.StaticParams==null)
+		{
+			ServiceParamBean.StaticParams=ServParamBean.getParams();
+		}
+		List<ParamBean> paramBeanList =ServiceParamBean.StaticParams;
+
+		for (ParamBean paramBean : paramBeanList) {
+			if (StringUtils.isNotBlank(paramBean.getKey())
+					&& "deviceAliveTime".equals(paramBean.getKey())) {
+					limitTime = Long.parseLong(paramBean.getValue());
+					log.info("心跳超时时间为"+limitTime+"分!");
+			}
+			else
+			{
+				log.error("从policy.xml获取不到超时时间deviceAliveTime!");
+				throw new IllegalArgumentException("从policy.xml获取不到超时时间deviceAliveTime");
+			}
+		}
+
+		
+	}
+}

@@ -1,0 +1,71 @@
+package com.vrv.cems.service.quartz;
+
+import java.io.IOException;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.junit.Test;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+
+import com.sys.common.util.security.CRCUtils;
+import com.vrv.cems.service.base.SystemConstants;
+import com.vrv.cems.service.base.interfaces.ICacheService;
+import com.vrv.cems.service.base.interfaces.IOnlineService;
+import com.vrv.cems.service.cache.bean.DBServParamBean;
+import com.vrv.cems.service.cache.util.PolicyConfigService;
+import com.vrv.cems.service.dbtools.DBUtil;
+
+
+public class PolicyXmlJob implements Job{
+	 private static Log logger = LogFactory.getLog(PolicyXmlJob.class);
+	 private ServiceParamBean newServBean;
+	 
+	@Override
+	public void execute(JobExecutionContext paramJobExecutionContext) {
+		// TODO 自动生成的方法存根
+		//读取数据库,取出数据
+		String xmlPath= SystemConstants.PATH_POLICY_XML;
+		@SuppressWarnings("unused")
+		DBServParamBean servParam=DBUtil.queryByServiceCode(ICacheService.SERVICE_CODE);
+		String policyXmlStr = null;
+		try {
+			policyXmlStr = PolicyConfigService.getInstance().policyXML2String(xmlPath);
+		} catch (IOException e1) {
+			// TODO 自动生成的 catch 块
+			e1.printStackTrace();
+		}
+		//db里的crcCode
+		String crcCheck=CRCUtils.getCRC32StringValue(policyXmlStr);
+		if(servParam == null){
+			throw new RuntimeException("查询数据库拉取策略定时器失败！");
+		}
+		if(policyXmlStr == null){
+			throw new RuntimeException("本地策略文件为空！");
+		}
+		//通过crc验证
+		try {
+		/*if(!crcCheck.equals(CRCUtils.getCRC32StringValue(servParam.getContent())))
+		{*/
+			//对文件进行解析,用一个统一的工具类
+			//把String转为配置对象
+			String xmlString=servParam.getContent();
+			
+			//依次取修改各种配置
+			newServBean = PolicyConfigService.getInstance().modifyLocalPolicyParam(xmlString, xmlPath);
+				//回写
+			PolicyConfigService.getInstance().localServicePolicyFileWrite(newServBean);
+		
+		//}
+		}//保存配置对象到本地文件
+		
+		catch (Exception e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+			logger.info("策略配置拉取定时器 失败!");
+		}
+	}
+	
+	
+}

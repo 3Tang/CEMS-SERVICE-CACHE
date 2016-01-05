@@ -1,0 +1,13 @@
+######################################## DB Config File ########################################
+driverClassName=com.mysql.jdbc.Driver
+url=jdbc:mysql://192.168.0.133:3306/cems_single?useUnicode=true&characterEncoding=UTF-8
+username=root
+password=123456
+
+##C3P0 Config########################################################################################
+c3p0.initialPoolSize=30
+c3p0.maxPoolSize=100
+c3p0.minPoolSize=10
+c3p0.acquireIncrement=3
+c3p0.maxIdleTime=60
+c3p0.acquireRetryAttempts=30

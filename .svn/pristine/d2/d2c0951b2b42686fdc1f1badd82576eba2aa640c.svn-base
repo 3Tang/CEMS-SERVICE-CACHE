@@ -1,0 +1,6 @@
+#[main]
+path.config.properties=../config/config.properties
+path.log4j.properties=../config/log4j.properties
+path.jdbc.properties=../config/jdbc.properties
+path.redis.properties=../config/redis.properties
+path.policy.xml=../config/policy.xml

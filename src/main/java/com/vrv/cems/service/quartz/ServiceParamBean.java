@@ -1,0 +1,225 @@
+package com.vrv.cems.service.quartz;
+
+import java.util.List;
+
+import com.vrv.cems.service.base.bean.TimerBean;
+
+public class ServiceParamBean {
+
+	/**
+	 * thrift配置
+	 */
+	private ThriftBean thriftBean;
+	/**
+	 * log4j日志配置
+	 */
+	private LogBean logBean;
+	/**
+	 * 参数
+	 */
+	private List<ParamBean> params;
+	
+	public static List<ParamBean> StaticParams;
+	
+	private ParamBean paramBean;
+	
+	/**
+	 * 定时器
+	 */
+	private List<TimerBean> timers;
+	
+	public ParamBean getParamBean() {
+		return paramBean;
+	}
+
+	public void setParamBean(ParamBean paramBean) {
+		this.paramBean = paramBean;
+	}
+
+	
+
+
+	public List<ParamBean> getParams() {
+		return params;
+	}
+
+	public void setParams(List<ParamBean> params) {
+		this.params = params;
+	}
+
+	public ThriftBean getThriftBean() {
+		return thriftBean;
+	}
+
+	public void setThriftBean(ThriftBean thriftBean) {
+		this.thriftBean = thriftBean;
+	}
+
+
+
+
+	
+	public static class ThriftBean{
+		
+		/**
+		 * 最大可用服务器处理器数
+		 */
+		private String selectorThreads;
+		/**
+		 * 最大工作线程数
+		 */
+		private String workerThreads;
+		public String getSelectorThreads() {
+			return selectorThreads;
+		}
+		public void setSelectorThreads(String selectorThreads) {
+			this.selectorThreads = selectorThreads;
+		}
+		public String getWorkerThreads() {
+			return workerThreads;
+		}
+		public void setWorkerThreads(String workerThreads) {
+			this.workerThreads = workerThreads;
+		}
+	}
+	
+	
+	public static class LogBean{
+		/**
+		 * 日志等级
+		 */
+		private String logLevel;
+		/**
+		 * 日志路径
+		 */
+		private String logPath;
+		public String getLogLevel() {
+			return logLevel;
+		}
+		public void setLogLevel(String logLevel) {
+			this.logLevel = logLevel;
+		}
+		public String getLogPath() {
+			return logPath;
+		}
+		public void setLogPath(String logPath) {
+			this.logPath = logPath;
+		}
+	}
+	
+	public static class ParamBean{
+		/**
+		 * 类型
+		 */
+		private String key;
+		/**
+		 * 时间值
+		 */
+		private String value;
+		public String getKey() {
+			return key;
+		}
+		public void setKey(String key) {
+			this.key = key;
+		}
+		public String getValue() {
+			return value;
+		}
+		public void setValue(String value) {
+			this.value = value;
+		}
+	}
+	
+	 
+	public static class Param
+	{
+		private String key;
+		private String sign;
+		private String defaultValue;
+		public String getKey() {
+			return key;
+		}
+		public void setKey(String key) {
+			this.key = key;
+		}
+		public String getSign() {
+			return sign;
+		}
+		public void setSign(String sign) {
+			this.sign = sign;
+		}
+		public String getDefaultValue() {
+			return defaultValue;
+		}
+		public void setDefaultValue(String defaultValue) {
+			this.defaultValue = defaultValue;
+		}
+		
+		
+		
+		
+		
+	}
+	/*public static class TimerBean{
+		*//**
+		 * 定时器名称
+		 *//*
+		private String name;
+		*//**
+		 * 组
+		 *//*
+		private String group;
+		*//**
+		 * 触发
+		 *//*
+		private String trigger;
+		*//**
+		 * 执行周期
+		 *//*
+		private String cycle;
+		
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public String getGroup() {
+			return group;
+		}
+		public void setGroup(String group) {
+			this.group = group;
+		}
+		public String getTrigger() {
+			return trigger;
+		}
+		public void setTrigger(String trigger) {
+			this.trigger = trigger;
+		}
+		public String getCycle() {
+			return cycle;
+		}
+		public void setCycle(String cycle) {
+			this.cycle = cycle;
+		}
+	}
+*/
+	
+
+	public LogBean getLogBean() {
+		return logBean;
+	}
+
+	public void setLogBean(LogBean logBean) {
+		this.logBean = logBean;
+	}
+
+	public List<TimerBean> getTimers() {
+		return timers;
+	}
+
+	public void setTimers(List<TimerBean> timers) {
+		this.timers = timers;
+	}
+
+}

@@ -1,0 +1,15 @@
+#configure server info
+server.ip=192.168.0.133
+server.port=8100
+
+#service self info
+service.id=
+service.name=CEMS-SERVICE-CACHE
+service.description=\u7f13\u5b58\u670d\u52a1
+service.code=00FF0700
+service.version=1.0
+service.port=8700
+service.serverAreaId=serverAreaMain
+service.ip=
+service.ssid=
+service.location=

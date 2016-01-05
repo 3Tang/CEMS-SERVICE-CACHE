@@ -1,0 +1,552 @@
+package com.vrv.cems.service.cache.util;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.SortingParams;
+
+import com.sys.common.util.CommentedProperties;
+import com.vrv.cems.service.cache.interfaces.JedisBase;
+import com.vrv.cems.service.cache.pool.SingleJedisPool;
+/** 
+ *   <B>说       明</B>:redis处理工具类. 包含初始化读取配置文件。增改查等操作。
+ *
+ * @author  作  者  名：代成<br/>
+ *		    E-mail ：daicheng@vrvmail.com.cn
+ 
+ * @version 版   本  号：V1.0.20140815<br/>
+ *          创建时间：2014年8月15日 17:01:41 
+ */
+public class RedisUtil {
+	protected Log log = LogFactory.getLog(this.getClass().getName());
+	private final static String SINGLE = "single";
+	/** 获取配置文件中的相关属性。 */
+	private Properties pros;
+	
+	/** 类型**/
+	private String type;
+	
+	/** 获取集群IP属性 */
+	private String hosts;
+	
+	/** 获取集群IP对应端口 */
+	private String ports;
+	
+	/** 获取集群JedisCluster对象 */
+	private JedisBase jc;
+	
+	private static CommentedProperties prop = new CommentedProperties();
+
+	private RedisUtil() {
+		init();
+	}
+
+	private static class SingletonHolder {
+		private static RedisUtil instance = new RedisUtil();
+	}
+
+	public static RedisUtil getInstance() {
+		return SingletonHolder.instance;
+	}
+
+	private void init() {
+		InputStream in = null;
+		try {
+			//读取配置文件中集群IP和端口
+			pros = new Properties();
+			//in = this.getClass().getResourceAsStream("/redis.properties");
+			File file = new File(prop.getPropertyFromCemsDat("path.redis.properties"));
+			in = new FileInputStream(file);
+			pros.load(in);
+			
+			type = pros.getProperty("redis.type");
+			hosts = pros.getProperty("redis.host");
+			ports = pros.getProperty("redis.port");
+			
+			if(SINGLE.equals(type)){
+				JedisPoolConfig config=new JedisPoolConfig();
+				//config.setEvictionPolicyClassName("org.apache.commons.pool2.impl.DefaultEvictionPolicy");
+				//config.setJmxEnabled(true);
+				//config.setJmxNamePrefix("pool");
+				//config.setLifo(true);
+				config.setMaxTotal(2500);
+				config.setMaxIdle(5);
+				config.setMinIdle(0);
+				//config.setNumTestsPerEvictionRun(150);
+				//在获取连接的时候检查有效性, 默认false
+				config.setTestOnBorrow(true);
+				//在空闲时检查有效性, 默认false
+				
+				int timeout=3000;
+				//JedisPool pool = new JedisPool(config, "localhost");
+				SingleJedisPool pool = new SingleJedisPool(config, hosts,Integer.parseInt(ports));
+				jc =  pool.getResource();
+			} else {
+				//将IP和端口保存到jedisClusterNodes集合参数中
+			    Set<HostAndPort> jedisClusterNodes = new HashSet<HostAndPort>();
+			    String[] arrHosts = hosts.split(";");
+			    String[] arrports = ports.split(";");
+			    for(int i=0;i<arrHosts.length;i++){
+			    	 jedisClusterNodes.add(new HostAndPort(arrHosts[i], Integer.valueOf(arrports[i])));  
+			    }
+			    	jc = new BinaryJedisCluster(jedisClusterNodes); 
+			}
+		} catch (Exception ex) {
+			log.error("没有找到redis配置文件", ex);
+		} finally {
+			if (in != null)
+				try {
+					in.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		}
+	}
+
+/*---------针对全局或者key-value类型数据操作-----------*/
+	/**
+	*  保存字符类型数据
+	* @param key 主键   value 值
+	* @return String  result
+	* @throws 
+	* @date 2014-08-06 15:31:41
+	*/ 
+	public String set(String key,String value) {
+		return jc.set(key, value);
+	}
+
+	/**
+	* 获取并更新数据
+	* @param key 主键   value 值
+	* @return String  result
+	* @throws 
+	* @date 2014-08-06 15:31:41
+	*/ 
+	public String getSet(String key,String value) {
+		return jc.getSet(key, value);
+	}
+	/**
+	*  判断key是否存在
+	* @param key 主键  
+	* @return boolean  result
+	* @date 2014-08-07 16:46:44
+	*/ 
+	public boolean exists(String key) {
+		return jc.exists(key);
+	}
+	/**
+	*  判断key不存在，则保存数据
+	* @param key 主键  
+	 * @return 
+	* @return
+	* @date 2014-08-07 16:46:44
+	*/ 
+	public Long setnx(String key,String value) {
+		 return jc.setnx(key, value);
+	}
+	
+	/**
+	*  清空所有数据
+	* @param 
+	* @return String   result
+	* @date 2014-08-07 16:46:44
+	*/ 
+	public String flushDB() {
+		return jc.flushDB();
+	}
+	/**
+	*  设置key的有效期，并存储数据
+	* @param key 主键    seconds 时间  value 值
+	* @return String  result
+	* @throws 
+	* @date 2014-08-06 15:31:41
+	*/ 
+	public String setex(String key,int seconds,String value) {
+		return jc.setex(key, seconds, value);
+	}
+	/**
+	*  追加数据
+	* @param key 需要追加的主键      value 值
+	 * @return 
+	* @return 
+	* @date 2014-08-06 15:31:41
+	*/ 
+	public Long append(String key,String value) {
+		 return jc.append(key, value);
+	}
+	
+	/**
+	*  截取value值
+	* @param key 主键      startOffset 开始位  endOffset结束位
+	* @return 
+	* @date 2014-08-07 17:29:31
+	*/ 
+	public String getrange(String key,long startOffset,long endOffset) {
+		return  jc.getrange(key, startOffset, endOffset);
+	}
+	/**
+	* 根据key获取value
+	* @param key 主键   
+	* @return String  result
+	* @throws 
+	* @date 2014-08-06 15:32:00
+	*/ 
+	public String get(String key) {
+		return jc.get(key);
+	}
+	/**
+	*  更新数据
+	* @param key 主键   value 值
+	* @return String  result
+	* @throws 
+	* @date 2014-08-06 15:31:41
+	*/ 
+	public String update(String key,String value) {
+		return jc.set(key, value);
+	}
+	/**
+	*  数据
+	* @param key 主键  
+	* @return Long  result
+	* @throws 
+	* @date 2014-08-06 16:05:22
+	*/ 
+	public Long delete(String key) {
+		return jc.del(key);
+	}
+	
+	
+	
+	/*---------针对Hash类型数据操作-----------*/
+	/**
+	*  Hash类型：保存数据
+	* @param key主键   field属性 value值
+	 * @return 
+	* @return String  result
+	* @date 2014-08-08 15:33:58
+	*/ 
+	public Long hset(String key,String field,String value) {
+		return jc.hset(key, field, value);
+	}
+	/**
+	*  Hash类型：获取数据
+	* @param key主键   field属性
+	* @return String  result
+	* @date 2014-08-08 15:33:58
+	*/ 
+	public String hget(String key,String field) {
+		return jc.hget(key, field);
+	}
+	/**
+	*  Hash类型：获取所有属性和数据
+	* @param key主键   
+	* @return Map<String, String>  result
+	* @date 2014-08-11 13:19:52
+	*/ 
+	public Map<String, String> hgetAll(String key) {
+		return jc.hgetAll(key);
+	}
+	/**
+	*  Hash类型：获取key下所有属性
+	* @param key主键   
+	* @return Set<String>  result
+	* @date 2014-08-11 13:19:52
+	*/ 
+	public Set<String> hfields(String key) {
+		return jc.hkeys(key);
+	}
+	
+	/**
+	*  Hash类型：获取key下所有属性
+	* @param key主键   
+	* @return Set<String>  result
+	* @date 2014-08-11 13:19:52
+	*/ 
+	public Set<String> keys(String key) {
+		return jc.keys(key);
+	}
+	/**
+	*  Hash类型：数据
+	* @param key主键    String... field属性
+	 * @return 
+	* @return Set<String>  result
+	* @date 2014-08-11 13:19:52
+	*/ 
+	public Long hdel(String key,String... field) {
+		 return jc.hdel(key, field);
+	}
+	/**
+	*  Hash类型：是否存在
+	* @param key主键    field属性
+	* @return Boolean  result
+	* @date 2014-08-11 13:19:52
+	*/ 
+	public Boolean hexists(String key,String field) {
+		return jc.hexists(key, field);
+	}
+	/**
+	*  Hash类型：判断key不存在，则保存数据
+	* @param  key主键   field属性 value值 
+	 * @return 
+	* @return
+	* @date 2014-08-08 15:36:58
+	*/ 
+	public Long hsetnx(String key,String field,String value) {
+		return jc.hsetnx(key, field, value);
+	}
+	/**
+	*  Hash类型：批量获取指定属性的值
+	* @param  key主键    String... field属性
+	* @return List<String> result
+	* @date 2014-08-08 15:36:58
+	*/ 
+	public List<String> hmget(String key,String... fields) {
+		return jc.hmget(key, fields);
+	}
+	/**
+	*  Hash类型：获取所有value
+	* @param  key主键   
+	* @return Long result
+	* @date 2014-08-08 15:36:58
+	*/ 
+	public List<String> hvals(String key) {
+		return jc.hvals(key);
+	}
+	
+	/**
+	*  Hash类型：为key中的域 field的值加上增量 increment
+	* @param  key主键     field属性 value值 
+	* @return Long result累加之后的结果
+	* @date 2014-08-08 15:36:58
+	*/ 
+	public Long hincrBy(String key,String field,long value) {
+		return jc.hincrBy(key, field, value);
+	}
+	
+	
+	
+	
+	
+	
+	/*---------针对List类型数据操作-----------*/
+	
+	/**
+	*  List类型:存储数据
+	* @param key 主键   value 值
+	 * @return 
+	* @return 
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public Long lpush(String key,String value) {
+		 return jc.lpush(key, value);
+	}
+	/**
+	*  List类型:获取数据
+	* @param key主键  start起始位置     end结束位置
+	* @return List<String> 结果
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public List<String> lrange(String key,long start,long end) {
+		 return jc.lrange(key, start, end);
+	}
+	
+	/**
+	*  List类型:获取数据长度
+	* @param key主键  
+	* @return long 长度
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public long llen(String key) {
+		 return jc.llen(key);
+	}
+	/**
+	* List类型:修改数据中的单个值
+	* @param key主键   index下标  value值
+	 * @return 
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public String lset(String key,long index,String value) {
+		  return jc.lset(key, index, value);
+	}
+	
+	/**
+	* List类型:获取单个值
+	* @param key主键   index下标  
+	* @date 2014-08-08 17:54:00
+	*/ 
+	public String lindex(String key,long index) {
+		 return  jc.lindex(key, index);
+	}
+	/**
+	* List类型:排序
+	* @param key主键  
+	* @return List<String> result 排序后的结果
+	* @date 2014-08-11 14:45:57
+	*/ 
+	public List<String> sort(String key) {
+		 return  jc.sort(key);
+	}
+	/**
+	* List类型:排序
+	* @param key主键  sortingParameters排序参数
+	* @return List<String> result 排序后的结果
+	* @date 2014-08-11 14:45:57
+	*/ 
+	public List<String> sort(String key,SortingParams sortingParameters) {
+		 return  jc.sort(key, sortingParameters);
+	}
+	/**
+	*  List类型:获取全部数据
+	* @param key主键  
+	* @return List<String> 结果
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public List<String> lgetAll(String key) {
+		 return jc.lrange(key, 0, -1);
+	}
+	/**
+	*  List类型:列表出栈
+	* @param key主键  
+	* @return String 结果
+	* @date 2014-08-08 16:54:45
+	*/ 
+	public String lpop(String key) {
+		 return jc.lpop(key);
+	}
+	
+	
+	
+	/*---------针对set类型数据操作-----------*/
+	/**
+	*  set类型：添加
+	* @param String key主键 |String... member值
+	* @return Long 结果
+	* @date 2014-08-12 16:37:22
+	*/ 
+	public Long sadd(String key,String... member) {
+		 return jc.sadd(key,member);
+	}
+	/**
+	*  set类型：判断value是否在列表中
+	* @param String key主键 |String member值
+	* @return Boolean 结果 
+	* @date 2014-08-12 16:37:22
+	*/ 
+	public Boolean sismember(String key,String member) {
+		 return jc.sismember(key, member);
+	}
+	/**
+	*  set类型：获取全部数据
+	* @param String key主键 
+	* @return Set<String> 结果 
+	* @date 2014-08-12 17:16:17
+	*/ 
+	public Set<String> smembers(String key) {
+		 return jc.smembers(key);
+	}
+	/**
+	* set类型：指定元素
+	* @param String key主键 |String... member值
+	* @return Long 结果 
+	* @date 2014-08-12 17:21:24
+	*/ 
+	public Long srem(String key,String... member) {
+		 return jc.srem(key, member);
+	}
+	/**
+	* set类型：出栈值
+	* @param String key主键 
+	* @return String 结果 
+	* @date 2014-08-12 17:21:24
+	*/ 
+	public String spop(String key) {
+		 return jc.spop(key);
+	}
+	
+	/*---------针对Sortedset类型数据操作-----------*/
+	
+	/**
+	* sortedset类型：添加
+	* @param String key主键  score分值    member数值
+	* @return Long 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Long zadd(String key,double score,String member) {
+		 return jc.zadd(key, score, member);
+	}
+	/**
+	* sortedset类型：获取分值
+	* @param String key主键      member数值
+	* @return Double 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Double zscore(String key,String member) {
+		 return jc.zscore(key, member);
+	}
+	/**
+	* sortedset类型：元素
+	* @param String key主键      member数值
+	* @return Long 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Long zrem(String key,String... member) {
+		 return jc.zrem(key, member);
+	}
+	
+	/**
+	* sortedset类型：元素个数
+	* @param String key主键 
+	* @return Long 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Long zcard(String key) {
+		 return jc.zcard(key);
+	}
+	/**
+	* sortedset类型：区间元素个数
+	* @param String key主键  min最小值 max最大值
+	* @return Long 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Long zcount(String key,double min,double max) {
+		 return jc.zcount(key, min, max);
+	}
+	
+	/**
+	* sortedset类型：获取整个集合值
+	* @param  key主键  start开始下标 end结束下标
+	* @return Long 结果 
+	* @date 2014-08-12 17:56:53
+	*/ 
+	public Set<String> zrange(String key,long start,long end) {
+		 return jc.zrange(key, start, end);
+	}
+   
+	
+	
+	
+	
+	/**
+	*  保存对象类型数据
+	* @return String  result
+	* @date 2014-08-08 15:33:58
+	*/ 
+	public Long saveObject(Object obje) {
+		return null;
+	}
+	
+}
+
